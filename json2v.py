@@ -47,6 +47,9 @@ def c2s(s):
 def is_snake(s):
     return bool(s and not s.startswith("_") and not s.endswith("_") and "__" not in s and re.fullmatch(r"[a-z][a-z0-9_]*", s))
 
+def py2v(t):
+    return {"str":"string","float":"f64","NoneType":"?any","dict":"struct"}.get(t, t)
+
 @dataclass
 class Ctx:
     issues: list[Issue]
@@ -79,9 +82,10 @@ def infer_list(items, key, ctx):
     uniq = list(dict.fromkeys(types))
     if len(uniq) == 1:
         t = uniq[0]
-        return f"[]{key.capitalize()}" if t == "dict" else f"[]{t}"
+        return f"[]{key.capitalize()}" if t == "dict" else f"[]{py2v(t)}"
     if len(uniq) == 2 and "NoneType" in uniq:
-        return f"[]?{[t for t in uniq if t != 'NoneType'][0]}"
+        real = [t for t in uniq if t != "NoneType"][0]
+        return f"[]?{py2v(real)}"
     ctx.issues.append(Issue(Level.WARN, "V002", f"Mixed types {uniq} in '{ctx.path}', using []any", ctx.path, "Ensure consistent element types"))
     return "[]any"
 
@@ -131,7 +135,7 @@ def convert(key, val, ctx):
             sname = resolved.capitalize()
             sub = ctx.sub(sname, 1)
             sp = [f"pub struct {sname} {{"]
-            for k, v in merged.items(): sp.append(convert(k, v, sub.sub(f"{sname}.{k}")))
+            for k, v in merged.items(): sp.append(convert(k, v, sub.sub(k)))
             sp.append("}")
             ctx.nested.append("\n".join(sp))
         parts.append(f"{pfx}mut {resolved} {lt}")
@@ -226,7 +230,7 @@ def mk_parser():
     g.add_argument("-v", "--verbose", action="store_true", help="Verbose diagnostics")
     g.add_argument("--no-color", action="store_true", help="Disable colors")
     g.add_argument("--strict", action="store_true", help="Warnings as errors")
-    p.add_argument("--version", action="version", version="json2v 2.0-prod")
+    p.add_argument("--version", action="version", version="json2v 2.1-prod")
     return p
 
 def main():
