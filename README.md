@@ -13,19 +13,63 @@ Built‑in lint checks catch naming issues, reserved words, type conflicts and m
 - Colored terminal output, verbose & dry‑run modes, and strict‑mode error handling
 - Reads from stdin or file; writes to stdout or file
 
-## Quick start
+## Installation
 
-Requires Python 3.8 or later – zero dependencies outside the standard library.
+### Requirements
+- Python 3.8 or higher (no external dependencies)
+
+### Recommended: install as a system command
+
+Create a `setup.py` file in the same directory as `json2v.py`:
+
+```python
+from setuptools import setup
+
+setup(
+    name='json2v',
+    version='2.1',
+    py_modules=['json2v'],
+    entry_points={
+        'console_scripts': ['json2v=json2v:main'],
+    },
+    python_requires='>=3.8',
+)
+```
+
+Then install with pip:
+
+```bash
+pip install .
+```
+
+Now you can invoke the tool globally:
+
+```bash
+json2v -i data.json -o output.v
+```
+
+### Alternative: manual placement
+
+Make the script executable and move it into your `PATH`:
+
+```bash
+chmod +x json2v.py
+sudo cp json2v.py /usr/local/bin/json2v
+```
+
+After that, `json2v` works from any terminal.
+
+## Quick start
 
 ```bash
 # From stdin
-echo '{"name":"Alice","age":30}' | python3 json2v.py
+echo '{"name":"Alice","age":30}' | json2v
 
 # From a file, output to another file
-python3 json2v.py -i data.json -o output.v
+json2v -i data.json -o output.v
 
-# Lint + auto‑fix
-python3 json2v.py -i data.json --lint --fix
+# Lint + auto‑fix with verbose diagnostics
+json2v -i data.json --lint --fix -v
 ```
 
 ## Options
@@ -49,7 +93,7 @@ python3 json2v.py -i data.json --lint --fix
 |------|----------|-------------|
 | V001 | Warning | Empty list – cannot infer element type |
 | V002 | Warning | List contains mixed element types |
-| V003 | Warning | Field value is `null` – cannot determine type |
+| V003 | Warning | Field value is `null` – cannot determine concrete type |
 | V004 | Error | Value type cannot be mapped to a V type |
 | V010 | Error/Warning | Field name is a V reserved word |
 | V011 | Error/Warning | Field name conflicts with a built‑in V type |
@@ -83,10 +127,10 @@ python3 json2v.py -i data.json --lint --fix
 **Command**
 
 ```bash
-python3 json2v.py -i data.json --lint --fix
+json2v -i data.json --lint --fix -v
 ```
 
-**Output (`stdout`)**
+**Generated V code (`stdout`)**
 
 ```v
 import json
@@ -121,20 +165,20 @@ pub struct Item {
 }
 ```
 
-**Lint report (`stderr`)**
+**Lint report (`stderr`, with `-v`)**
 
 ```
 ══════════════════════════════════════════════════════
-  Lint Diagnostic Report
+  Lint Report
 ══════════════════════════════════════════════════════
 
   ⚠ Warnings (2)
-    [V012] Field 'Root.userName' is not snake_case, automatically converted -> 'user_name'
-      Location: Root.userName
-      Suggestion: auto-fix: userName -> user_name
-    [V003] Field 'Root.profile' has null value, unable to determine concrete type
-      Location: Root.profile
-      Suggestion: Manually replace '?any' with a concrete optional type, e.g. '?string'
+    [V012] 'Root.userName' invalid naming
+      Path: Root.userName
+      Fix: -> user_name
+    [V003] Null at 'Root.profile'
+      Path: Root.profile
+      Fix: Replace ?any
 
   Total: 2 warning(s)
 ══════════════════════════════════════════════════════
